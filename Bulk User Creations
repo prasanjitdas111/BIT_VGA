@@ -1,0 +1,30 @@
+#Import Module
+
+Import-Module ActiveDirectory -ErrorAction SilentlyContinue
+
+#Create a simple password
+
+$securepassword = ConvertTo-SecureString "TestPassword123$" -AsPlainText -Force
+
+#Get the CSV path
+
+$filepath = Read-Host -Prompt "Please enter the path to your CSV file"
+
+$users = Import-Csv $filepath
+
+
+#Segrating fields
+
+ForEach ($user in $users) {
+
+$fname = $user.'first name'   #coming from CSV file header name
+$lname = $user.'last name'
+$jtitle = $user.'job title'
+$email = $user.'email address'  # or $fname.$lname@company.com.au
+$OUpath = $user.OU  #get from AD
+
+New-ADUser -Name "$fname $lname" -GivenName $fname -Surname $lname -Path $OUpath -AccountPassword $securepassword -ChangePasswordAtLogon $true -EmailAddress $email
+
+echo "Account created for $fname $lname in $OUpath"
+
+} 
