@@ -1,0 +1,60 @@
+$UserCredential = Get-Credential
+
+$Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://vgausyxchl02.vwau.apac.vwg/PowerShell/ -Authentication Kerberos -Credential $UserCredential
+
+Import-PSSession $Session -AllowClobber
+
+#New User mailbox
+
+
+Enable-Mailbox -Identity $Username -Database vgausyxchl0205  -PrimarySmtpAddress $Firstname.$Lastname@volkswagen.com.au
+Enable-Mailbox -Identity $Username -Database vgausyxchl0205  -PrimarySmtpAddress $Firstname.$Lastname@skoda.com.au
+
+
+
+#Resource mailbox purpose (shared mailbox)
+
+enable-mailbox -identity TW20W9M -database vgausyxchl0204 -primarysmtpaddress legal@volkswagen.com.au 
+
+Get-Mailbox -Identity TW20W9M | set-mailbox -Type shared
+
+
+
+#Full access 
+
+Add-MailboxPermission -Identity "hr@volkswagen.com.au" -User "FLV35I6" -AccessRights FullAccess
+
+#Send on Behalf access
+
+Set-Mailbox -Identity "TW20W9M" -GrantSendOnBehalfTo @{Add="lisa.sousa@volkswagen.com.au", "paul.dupreez@volkswagen.com.au", "nikki.voss@volkswagen.com.au", "timothy.rosandi@volkswagen.com.au"}
+
+Set-Mailbox -Identity "hr@volkswagen.com.au" -GrantSendOnBehalfTo @{Add="FLV35I6"}
+
+
+#Email forward Rule
+
+Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn;
+
+
+Set-Mailbox -Identity "frank.valenzi@volkswagen.com.au" -DeliverToMailboxAndForward $false -ForwardingSmtpAddress darren.fry@volkswagen.com.au
+
+Get-Mailbox "frank.valenzi@volkswagen.com.au" | Format-List ForwardingSMTPAddress,DeliverToMailboxandForward
+
+add-pssnapin *exchange* -erroraction SilentlyContinue
+
+
+#Convert to user to shared mailbox
+
+Set-Mailbox dvaulki -Type shared
+
+
+# AD- Manage Distribution List #
+
+$module = Get-Module | Where-Object {$_.Name -eq 'ActiveDirectory'} 
+if ($module -eq $null) { 
+    Write-Host "Loading Active Directory PowerShell Module" 
+    Import-Module ActiveDirectory -ErrorAction SilentlyContinue 
+} 
+
+
+Set-DistributionGroup -Identity 'VGA - GLT' -ManagedBy 'DVAUCOB'
