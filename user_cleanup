@@ -1,0 +1,38 @@
+#import the Active Directory module if not already up and loaded 
+$module = Get-Module | Where-Object {$_.Name -eq 'ActiveDirectory'} 
+
+if ($module -eq $null) 
+{ 
+    Write-Host "Loading Active Directory PowerShell Module" 
+    Import-Module ActiveDirectory -ErrorAction SilentlyContinue 
+} 
+
+$employeeSAN = Read-Host "Enter employee login/alias/SamAccountName " 
+$adServer = "APACSYD00001.APAC.VWG"
+
+try{ 
+    Get-ADUser -Identity $employeeSAN -Server $adServer 
+    #if that doesn't throw you to the catch this person exists. So you can continue 
+   }
+
+catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]
+    {Write-Host "Account not found in AD, please try again." 
+    $employeeSAN = $null
+    }
+
+if ($employeeSAN -ne $null) 
+{
+$ADgroups = Get-ADPrincipalGroupMembership -Identity $employeeSAN | where {$_.Name -ne "Domain Users"} 
+    if ($ADgroups -ne $null)
+    { 
+        Remove-ADPrincipalGroupMembership -Identity $employeeSAN -MemberOf $ADgroups -Server $adServer -Confirm:$false 
+    } 
+    #removes the manager field from the user
+    
+    set-aduser $employeeSAN -Manager $null
+    $UserCredential = Get-Credential
+    $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://vgausyxchl02.vwau.apac.vwg/PowerShell/ -Authentication Kerberos -Credential $UserCredential
+    Import-PSSession $Session -AllowClobber
+    Get-Mailbox -organizationalunit "OU=Users,OU=VG Australia,OU=Domain Users,DC=apac,DC=vwg" | Get-MailboxPermission -User $employeeSAN | Remove-MailboxPermission -User $employeeSAN -AccessRights FullAccess, ReadPermission, ChangePermission -Confirm:$false
+     Write-Host "User removal from AD has been Completed without error"
+}
